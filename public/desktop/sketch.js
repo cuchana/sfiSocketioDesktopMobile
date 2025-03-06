@@ -1,44 +1,76 @@
-let socket;
-let circleX = 200;
-let circleY = 200;
-const port = 3000;
+// desktop
 
+let socket;
+let capture;
+let captureButton;
+let sendButton;
+let fileInput;
+let imgCanvas;
 
 function setup() {
     createCanvas(400, 400);
     background(220);
 
-    //let socketUrl = 'http://localhost:3000';
-    let socketUrl = 'https://supreme-space-eureka-x9wpv75jjpf6gpv-3000.app.github.dev/';
-    socket = io(socketUrl); 
+    let socketUrl = 'http://localhost:3000';
+    socket = io(socketUrl);
 
-    // Evento de conexión exitosa
     socket.on('connect', () => {
         console.log('Connected to server');
     });
 
-    // Recibir mensaje del servidor
-    socket.on('message', (data) => {
-        console.log(`Received message: ${data}`);
-        let parsedData = JSON.parse(data);
-        if (parsedData.type === 'touch') {
-            circleX = parsedData.x;
-            circleY = parsedData.y;
-        }
-    });    
+    // Inicializar la cámara
+    capture = createCapture(VIDEO);
+    capture.size(400, 300);
+    capture.hide(); // Ocultar el video en vivo
 
-    // Evento de desconexión
-    socket.on('disconnect', () => {
-        console.log('Disconnected from server');
-    });
+    // Botón para tomar foto
+    captureButton = createButton('📷 Tomar Foto');
+    captureButton.position(10, height + 10);
+    captureButton.mousePressed(takePhoto);
 
-    socket.on('connect_error', (error) => {
-        console.error('Socket.IO error:', error);
-    });
+    // Botón para enviar la foto
+    sendButton = createButton('📤 Enviar Foto');
+    sendButton.position(110, height + 10);
+    sendButton.mousePressed(sendPhoto);
+    sendButton.hide(); // Se mostrará después de tomar una foto
+
+    // Input para subir imágenes
+    fileInput = createFileInput(handleFile);
+    fileInput.position(250, height + 10);
+}
+
+// Tomar una foto con la cámara
+function takePhoto() {
+    imgCanvas = capture.get(); // Capturar imagen actual del video
+    sendButton.show(); // Mostrar botón de enviar
+}
+
+// Manejar una imagen subida desde el sistema de archivos
+function handleFile(file) {
+    if (file.type === 'image') {
+        console.log('Imagen cargada desde archivos');
+        imgCanvas = loadImage(file.data, () => {
+            sendPhoto(); // Enviar la imagen automáticamente
+        });
+    }
+}
+
+// Enviar la imagen al servidor
+function sendPhoto() {
+    if (imgCanvas) {
+        let imgData = imgCanvas.canvas.toDataURL(); // Convertir a Base64
+        console.log('Enviando imagen...');
+        socket.emit('image', imgData);
+        sendButton.hide(); // Ocultar botón de enviar después de enviarla
+    }
 }
 
 function draw() {
     background(220);
-    fill(255, 0, 0);
-    ellipse(circleX, circleY, 50, 50);
+    image(capture, 0, 0, 400, 300); // Mostrar el video en vivo
+
+    if (imgCanvas) {
+        image(imgCanvas, 50, 320, 100, 75); // Previsualizar la imagen tomada o cargada
+    }
 }
+

@@ -1,59 +1,43 @@
+// mobile
+
 let socket;
-const port = 3000;
-let lastTouchX = null; 
-let lastTouchY = null; 
-const threshold = 5;
+let imgElement;
 
 function setup() {
     createCanvas(400, 400);
     background(220);
 
-    // Conectar al servidor de Socket.IO
-    //let socketUrl = 'http://192.168.1.17:3000';
-    let socketUrl = 'https://supreme-space-eureka-x9wpv75jjpf6gpv-3000.app.github.dev/';
+    let socketUrl = 'http://localhost:3000';
     socket = io(socketUrl);
 
     socket.on('connect', () => {
         console.log('Connected to server');
     });
 
-    socket.on('message', (data) => {
-        console.log(`Received message: ${data}`);
+    // Recibir imagen desde el servidor
+    socket.on('image', (data) => {
+        console.log('Imagen recibida');
+
+        if (imgElement) {
+            imgElement.remove(); // Eliminar imagen anterior
+        }
+
+        imgElement = createImg(data, 'Foto recibida');
+        imgElement.hide(); // Ocultar HTML
+
+        // Asegurar que se redibuja correctamente
+        setTimeout(() => {
+            redraw(); // Forzar redibujado después de recibir la imagen
+        }, 100);
     });
 
-    socket.on('disconnect', () => {
-        console.log('Disconnected from server');
-    });
-
-    socket.on('connect_error', (error) => {
-        console.error('Socket.IO error:', error);
-    });
+    noLoop(); // Evita que draw() se ejecute en bucle
 }
 
 function draw() {
     background(220);
-    fill(0, 255, 0);
-    textAlign(CENTER, CENTER);
-    textSize(32);
-    text('Touch to move the circle', width / 2, height / 2);
-}
-
-function touchMoved() {
-    if (socket && socket.connected) { 
-        let dx = abs(mouseX - lastTouchX);
-        let dy = abs(mouseY - lastTouchY);
-
-        if (dx > threshold || dy > threshold) {
-            let touchData = {
-                type: 'touch',
-                x: mouseX,
-                y: mouseY
-            };
-            socket.emit('message', JSON.stringify(touchData));
-
-            lastTouchX = mouseX;
-            lastTouchY = mouseY;
-        }
+    if (imgElement) {
+        image(imgElement, 50, 50, 300, 300); // Dibujar la imagen en el canvas
     }
-    return false;
 }
+
